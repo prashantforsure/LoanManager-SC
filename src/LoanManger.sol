@@ -1,12 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "openzeppelin-contracts/access/Ownable.sol";
-import "openzeppelin-contracts/security/ReentrancyGuard.sol";
+contract LoanManager {
 
+    address private _owner;
+    
+    error OwnableUnauthorizedAccount(address account);
+    error OwnableInvalidOwner(address owner);
+    
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    
+   
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+    
+    error ReentrancyGuardReentrantCall();
 
-
-contract LoanManager is Ownable, ReentrancyGuard {
     struct Loan {
         address borrower;       
         uint256 principal;      
@@ -20,7 +30,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
     }
   
     uint256 public loanCount;
-
     mapping(uint256 => Loan) public loans;
 
     event LoanCreated(
@@ -35,7 +44,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
         uint256 indexed loanId,
         uint256 totalRepayable
     );
-
     
     event LoanRepaid(
         uint256 indexed loanId,
@@ -44,9 +52,48 @@ contract LoanManager is Ownable, ReentrancyGuard {
         bool fullyRepaid
     );
 
-  
-    constructor(address initialOwner) Ownable(initialOwner) {
-        // ... any additional initialization if needed ...
+    constructor(address initialOwner) {
+        if (initialOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _owner = initialOwner;
+        _status = _NOT_ENTERED;
+        emit OwnershipTransferred(address(0), initialOwner);
+    }
+
+    // Ownable modifiers and functions
+    modifier onlyOwner() {
+        if (msg.sender != _owner) {
+            revert OwnableUnauthorizedAccount(msg.sender);
+        }
+        _;
+    }
+
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    function transferOwnership(address newOwner) public onlyOwner {
+        if (newOwner == address(0)) {
+            revert OwnableInvalidOwner(address(0));
+        }
+        _transferOwnership(newOwner);
+    }
+
+    function _transferOwnership(address newOwner) internal {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
+    // ReentrancyGuard modifier
+    modifier nonReentrant() {
+        if (_status == _ENTERED) {
+            revert ReentrancyGuardReentrantCall();
+        }
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
     }
 
     function createLoan(uint256 principal, uint256 interestRate, uint256 dueDate) external {
@@ -70,7 +117,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
         emit LoanCreated(loanCount, msg.sender, principal, interestRate, dueDate);
     }
 
-  
     function approveLoan(uint256 loanId) external onlyOwner {
         Loan storage loan = loans[loanId];
         require(loan.borrower != address(0), "Loan does not exist");
@@ -83,7 +129,6 @@ contract LoanManager is Ownable, ReentrancyGuard {
         emit LoanApproved(loanId, loan.totalRepayable);
     }
 
-   
     function repayLoan(uint256 loanId) external payable nonReentrant {
         Loan storage loan = loans[loanId];
         require(loan.borrower != address(0), "Loan does not exist");
@@ -113,23 +158,18 @@ contract LoanManager is Ownable, ReentrancyGuard {
         emit LoanRepaid(loanId, payment, loan.amountRepaid, fullyRepaid);
     }
 
- 
     function getLoanDetails(uint256 loanId) external view returns (Loan memory) {
         require(loans[loanId].borrower != address(0), "Loan does not exist");
         return loans[loanId];
     }
 
-  
     function withdrawFunds(uint256 amount) external onlyOwner {
         require(amount <= address(this).balance, "Insufficient contract balance");
         (bool success, ) = owner().call{value: amount}("");
         require(success, "Withdrawal failed");
     }
 
-
-    /// @notice 
     receive() external payable {}
-
-    /// @notice 
+    
     fallback() external payable {}
 }
