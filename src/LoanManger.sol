@@ -5,6 +5,7 @@ import "openzeppelin-contracts/access/Ownable.sol";
 import "openzeppelin-contracts/security/ReentrancyGuard.sol";
 
 
+
 contract LoanManager is Ownable, ReentrancyGuard {
     struct Loan {
         address borrower;       
@@ -44,6 +45,10 @@ contract LoanManager is Ownable, ReentrancyGuard {
     );
 
   
+    constructor(address initialOwner) Ownable(initialOwner) {
+        // ... any additional initialization if needed ...
+    }
+
     function createLoan(uint256 principal, uint256 interestRate, uint256 dueDate) external {
         require(principal > 0, "Principal must be greater than zero");
         require(interestRate > 0, "Interest rate must be greater than zero");
