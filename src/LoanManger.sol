@@ -16,7 +16,7 @@ contract LoanManager {
     uint256 private _status;
     
     error ReentrancyGuardReentrantCall();
-
+// loan struct hai yeah 
     struct Loan {
         address borrower;       
         uint256 principal;      
@@ -31,7 +31,7 @@ contract LoanManager {
   
     uint256 public loanCount;
     mapping(uint256 => Loan) public loans;
-
+//loan event for the frontend for the notification and all 
     event LoanCreated(
         uint256 indexed loanId,
         address indexed borrower,
@@ -44,7 +44,7 @@ contract LoanManager {
         uint256 indexed loanId,
         uint256 totalRepayable
     );
-    
+    // this is the event for the loan owner
     event LoanRepaid(
         uint256 indexed loanId,
         uint256 amount,
@@ -61,7 +61,6 @@ contract LoanManager {
         emit OwnershipTransferred(address(0), initialOwner);
     }
 
-    // Ownable modifiers and functions
     modifier onlyOwner() {
         if (msg.sender != _owner) {
             revert OwnableUnauthorizedAccount(msg.sender);
@@ -86,7 +85,6 @@ contract LoanManager {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 
-    // ReentrancyGuard modifier
     modifier nonReentrant() {
         if (_status == _ENTERED) {
             revert ReentrancyGuardReentrantCall();
